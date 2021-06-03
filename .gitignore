@@ -1,0 +1,9 @@
+node_modules/
+dist/
+coverage/
+coverage-ts/
+.env
+.env.*
+!.env.example
+demo/migrations/*
+!demo/migrations/1623251695053-example.js
