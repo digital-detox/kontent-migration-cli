@@ -5,6 +5,12 @@ import make from "../lib/create-migration-file";
 
 const program = new Command();
 
-program.name(`make <migration-name>`).parse(process.argv);
+program
+  .name(`make <migration-name>`)
+  .option(
+    "-d, --description [message]",
+    "Optional description for the migration. You'll be able to add it later in the file anyway."
+  )
+  .parse(process.argv);
 
-make(program.args[0]);
+make(program.args[0], program.opts());

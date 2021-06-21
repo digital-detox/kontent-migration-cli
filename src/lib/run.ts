@@ -4,7 +4,7 @@ import path from "path";
 import fs from "fs";
 import { promisify } from "util";
 import ora from "ora";
-import { getLatestMigration } from "./util";
+import { getLatestMigration, sanatiseCodename } from "./util";
 
 require("dotenv").config({
   path: path.resolve(process.cwd(), "./.env")
@@ -18,7 +18,7 @@ const getProjectMigrations = async () => {
   );
   return projectMigrations.sort();
 };
-const getToDoMigrations = (
+const getTodoMigrations = (
   projectMigrations: string[],
   latestMigration?: ContentItem
 ): string[] => {
@@ -41,12 +41,11 @@ const saveMigrationEntry = async (
     batch
   }: { name: string; description: string; batch: number }
 ) => {
-  const codename = path.basename(name, ".js").replace(/\d*-/g, "");
   const contentItem = await client
     .addContentItem()
     .withData({
       name: description,
-      codename: codename.replace(/-/g, "_"),
+      codename: sanatiseCodename(name),
       type: {
         codename: "migration"
       }
@@ -83,24 +82,24 @@ export default async () => {
   const run = ora("Calculating migrations to run").start();
   const latestMigration = await getLatestMigration();
   const projectMigrations = await getProjectMigrations();
-  const toDoMigrations = getToDoMigrations(projectMigrations, latestMigration);
+  const todoMigrations = getTodoMigrations(projectMigrations, latestMigration);
   const client = new ManagementClient({
     projectId: process.env.PROJECT_ID,
     apiKey: process.env.API_KEY
   });
 
-  if (!toDoMigrations.length) {
+  if (!todoMigrations.length) {
     run.info("All migrations have been run already!");
     process.exit(0);
   }
 
   run.succeed();
 
-  for (const toDoMigration of toDoMigrations) {
+  for (const todoMigration of todoMigrations) {
     const { up, description } = await require(path.resolve(
       process.cwd(),
       process.env.MIGRATION_FOLDER || "./",
-      toDoMigration
+      todoMigration
     ));
     const migrationTask = ora(`Running migration ${description}`).start();
 
@@ -110,7 +109,7 @@ export default async () => {
       migrationTask.text = `Saving the migration ${description}`;
 
       await saveMigrationEntry(client, {
-        name: toDoMigration,
+        name: todoMigration,
         description,
         batch: latestMigration
           ? parseFloat(latestMigration["batch_number"].value) + 1

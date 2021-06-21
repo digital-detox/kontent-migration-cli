@@ -8,15 +8,28 @@ require("dotenv").config({
   path: path.resolve(process.cwd(), "./.env")
 });
 
-export default (migrationName?: string) => {
+type Options = {
+  description?: string;
+};
+
+export default (migrationName?: string, options?: Options) => {
+  if (!migrationName) {
+    console.error(
+      "You need to provide a migration name, e.g. $ make add-tag-field-to-page"
+    );
+
+    process.exit(1);
+  }
+
   const migrationFolder = process.env.MIGRATION_FOLDER || "./";
   const createMigrationFile = ora(
     `Creating the migration file for ${migrationName}`
   ).start();
+  const { description = "Description of the migration" } = options || {};
   const template = beautify(`
   "use strict";
 
-  module.exports.description = "Description of the migration";
+  module.exports.description = "${description}";
 
   module.exports.up = (client) => {
     // Your up migration code goes here.
