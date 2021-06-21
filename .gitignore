@@ -7,3 +7,4 @@ coverage-ts/
 !.env.example
 demo/migrations/*
 !demo/migrations/1623251695053-example.js
+yarn-error.log
