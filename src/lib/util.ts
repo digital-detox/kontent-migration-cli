@@ -5,7 +5,7 @@ require("dotenv").config({
   path: path.resolve(process.cwd(), "./.env")
 });
 
-const deliveryClient = new DeliveryClient({
+export const deliveryClient = new DeliveryClient({
   projectId: process.env.PROJECT_ID,
   previewApiKey: process.env.PREVIEW_KEY,
   globalQueryConfig: {
@@ -27,16 +27,41 @@ export const getLatestMigration = async (): Promise<
   return items[0];
 };
 
-export const getMigrationsByBatchNumber = async (batchNumber: number) => {
-  const { items } = await deliveryClient
-    .items()
-    .type("migration")
-    .elementsParameter([
-      // TODO:
-      "batch_number"
-    ])
-    .toObservable()
-    .toPromise();
+export const sanatiseCodename = (codename: string): string => {
+  return path.basename(codename, ".js").replace(/\d*-/g, "").replace(/-/g, "_");
+};
 
-  return items;
+export const getLatestBatchMigrations = async (): Promise<string[]> => {
+  let items;
+
+  try {
+    const { items: responseItems } = await deliveryClient
+      .items()
+      .type("migration")
+      .orderByDescending("elements.batch_number")
+      .toObservable()
+      .toPromise();
+
+    items = responseItems;
+  } catch {
+    throw new Error("Something went wrong fetching the items.");
+  }
+
+  const latestMigrations = [];
+
+  if (!items.length) {
+    return latestMigrations;
+  }
+
+  const batchNumber = items[0]["batch_number"].value;
+
+  for (const migration of [...items].sort()) {
+    if (migration["batch_number"].value !== batchNumber) {
+      return latestMigrations;
+    }
+
+    latestMigrations.push(migration["name"].value);
+  }
+
+  return latestMigrations;
 };

@@ -1,10 +1,10 @@
 import { ContentItem } from "@kentico/kontent-delivery";
-import { ManagementClient } from "@kentico/kontent-management";
+import { ManagementClient, ElementModels } from "@kentico/kontent-management";
 import path from "path";
-import fs from "fs";
+import fs, { Dirent } from "fs";
 import { promisify } from "util";
 import ora from "ora";
-import { getLatestMigration } from "./util";
+import { getLatestMigration, sanatiseCodename } from "./util";
 
 require("dotenv").config({
   path: path.resolve(process.cwd(), "./.env")
@@ -14,20 +14,25 @@ const readdir = promisify(fs.readdir);
 
 const getProjectMigrations = async () => {
   const projectMigrations = await readdir(
-    path.resolve(process.cwd(), process.env.MIGRATION_FOLDER || "./")
-  );
-  return projectMigrations.sort();
+    path.resolve(process.cwd(), process.env.MIGRATION_FOLDER || "./"),
+    { withFileTypes: true }
+  ).catch((e) => console.error(e));
+
+  return (projectMigrations || [])
+    .filter((f) => f.isFile())
+    .sort((a, b) => a.name.localeCompare(b.name));
 };
-const getToDoMigrations = (
-  projectMigrations: string[],
+
+const getTodoMigrations = (
+  projectMigrations: Dirent[],
   latestMigration?: ContentItem
-): string[] => {
+): Dirent[] => {
   if (!latestMigration) {
     return projectMigrations;
   }
 
-  const latestMigrationPosition = projectMigrations.indexOf(
-    latestMigration["name"].value
+  const latestMigrationPosition = projectMigrations.findIndex(
+    (f) => f.name === latestMigration["name"].value
   );
 
   return projectMigrations.slice(latestMigrationPosition + 1);
@@ -41,20 +46,20 @@ const saveMigrationEntry = async (
     batch
   }: { name: string; description: string; batch: number }
 ) => {
-  const codename = path.basename(name, ".js").replace(/\d*-/g, "");
   const contentItem = await client
     .addContentItem()
     .withData({
       name: description,
-      codename: codename.replace(/-/g, "_"),
+      codename: sanatiseCodename(name),
       type: {
         codename: "migration"
       }
     })
     .toObservable()
-    .toPromise();
+    .toPromise()
+    .catch((e) => console.error(e));
 
-  const itemId = contentItem.data.id;
+  const itemId = (contentItem || {}).data?.id;
 
   await client
     .upsertLanguageVariant()
@@ -76,49 +81,55 @@ const saveMigrationEntry = async (
       })
     ])
     .toObservable()
-    .toPromise();
+    .toPromise()
+    .catch((e) => console.error(e));
 };
 
 export default async () => {
   const run = ora("Calculating migrations to run").start();
   const latestMigration = await getLatestMigration();
   const projectMigrations = await getProjectMigrations();
-  const toDoMigrations = getToDoMigrations(projectMigrations, latestMigration);
+  const todoMigrations = getTodoMigrations(projectMigrations, latestMigration);
   const client = new ManagementClient({
     projectId: process.env.PROJECT_ID,
     apiKey: process.env.API_KEY
   });
 
-  if (!toDoMigrations.length) {
+  if (!todoMigrations.length) {
     run.info("All migrations have been run already!");
     process.exit(0);
   }
 
   run.succeed();
 
-  for (const toDoMigration of toDoMigrations) {
+  for (const todoMigration of todoMigrations) {
     const { up, description } = await require(path.resolve(
       process.cwd(),
       process.env.MIGRATION_FOLDER || "./",
-      toDoMigration
+      todoMigration.name
     ));
     const migrationTask = ora(`Running migration ${description}`).start();
 
     try {
-      await up(client);
+      await up(client, { ElementModels })
+        .then((i) => {
+          migrationTask.text = `content type created:: ${i}`;
+        })
+        .catch((e) => console.error(e));
 
       migrationTask.text = `Saving the migration ${description}`;
 
       await saveMigrationEntry(client, {
-        name: toDoMigration,
+        name: todoMigration.name,
         description,
         batch: latestMigration
           ? parseFloat(latestMigration["batch_number"].value) + 1
           : 1
-      });
+      }).catch((e) => console.error(e));
 
       migrationTask.succeed();
     } catch (error) {
+      console.log(error);
       migrationTask.fail(
         `The migration ${description} failed because ... ${error.message}`
       );
