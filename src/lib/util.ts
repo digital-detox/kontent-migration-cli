@@ -38,11 +38,17 @@ export const getLatestBatchMigrations = async (): Promise<string[]> => {
     const { items: responseItems } = await deliveryClient
       .items()
       .type("migration")
-      .orderByDescending("elements.batch_number")
       .toObservable()
       .toPromise();
 
-    items = responseItems;
+    // @note: In theory this shouldn't be necessary, as the latest migration
+    // should have the latest batch.
+    items = [...responseItems].sort((a, b) => {
+      return (
+        parseFloat(b["batch_number"].value) -
+        parseFloat(a["batch_number"].value)
+      );
+    });
   } catch {
     throw new Error("Something went wrong fetching the items.");
   }

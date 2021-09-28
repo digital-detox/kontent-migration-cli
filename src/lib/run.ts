@@ -1,7 +1,7 @@
 import { ContentItem } from "@kentico/kontent-delivery";
-import { ManagementClient } from "@kentico/kontent-management";
+import { ManagementClient, ElementModels } from "@kentico/kontent-management";
 import path from "path";
-import fs from "fs";
+import fs, { Dirent } from "fs";
 import { promisify } from "util";
 import ora from "ora";
 import { getLatestMigration, sanatiseCodename } from "./util";
@@ -13,21 +13,31 @@ require("dotenv").config({
 const readdir = promisify(fs.readdir);
 
 const getProjectMigrations = async () => {
-  const projectMigrations = await readdir(
-    path.resolve(process.cwd(), process.env.MIGRATION_FOLDER || "./")
-  );
-  return projectMigrations.sort();
+  try {
+    const projectMigrations = await readdir(
+      path.resolve(process.cwd(), process.env.MIGRATION_FOLDER || "./"),
+      {
+        withFileTypes: true
+      }
+    );
+    return projectMigrations
+      .filter((file) => file.isFile())
+      .sort((a, b) => a.name.localeCompare(b.name));
+  } catch {
+    return [];
+  }
 };
+
 const getTodoMigrations = (
-  projectMigrations: string[],
+  projectMigrations: Dirent[],
   latestMigration?: ContentItem
-): string[] => {
+): Dirent[] => {
   if (!latestMigration) {
     return projectMigrations;
   }
 
-  const latestMigrationPosition = projectMigrations.indexOf(
-    latestMigration["name"].value
+  const latestMigrationPosition = projectMigrations.findIndex(
+    (file) => file.name === latestMigration["name"].value
   );
 
   return projectMigrations.slice(latestMigrationPosition + 1);
@@ -53,7 +63,11 @@ const saveMigrationEntry = async (
     .toObservable()
     .toPromise();
 
-  const itemId = contentItem.data.id;
+  const itemId = contentItem?.data?.id;
+
+  if (!itemId) {
+    throw new Error("Unable to save the migration entry.");
+  }
 
   await client
     .upsertLanguageVariant()
@@ -99,17 +113,17 @@ export default async () => {
     const { up, description } = await require(path.resolve(
       process.cwd(),
       process.env.MIGRATION_FOLDER || "./",
-      todoMigration
+      todoMigration.name
     ));
     const migrationTask = ora(`Running migration ${description}`).start();
 
     try {
-      await up(client);
+      await up(client, { ElementModels });
 
       migrationTask.text = `Saving the migration ${description}`;
 
       await saveMigrationEntry(client, {
-        name: todoMigration,
+        name: todoMigration.name,
         description,
         batch: latestMigration
           ? parseFloat(latestMigration["batch_number"].value) + 1

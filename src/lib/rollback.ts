@@ -1,4 +1,4 @@
-import { ManagementClient } from "@kentico/kontent-management";
+import { ManagementClient, ElementModels } from "@kentico/kontent-management";
 import path from "path";
 import ora from "ora";
 import { getLatestBatchMigrations, sanatiseCodename } from "./util";
@@ -61,7 +61,7 @@ export default async () => {
     ).start();
 
     try {
-      await down(client);
+      await down(client, { ElementModels });
 
       migrationTask.text = `Deleting the migration "${description}"`;
 

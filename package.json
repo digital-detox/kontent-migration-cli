@@ -5,7 +5,7 @@
   "bin": {
     "kontent-migrate": "dist/bin/migrate.js"
   },
-  "main": "dist/index.js",
+  "main": "dist/bin/migrate.js",
   "repository": "git@github.com:alexcanessa/global-config-file.git",
   "author": "Alex Canessa <canessa.alex@gmail.com>",
   "license": "MIT",
