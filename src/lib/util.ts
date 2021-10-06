@@ -13,18 +13,15 @@ export const deliveryClient = new DeliveryClient({
   }
 });
 
-export const getLatestMigration = async (): Promise<
-  ContentItem | undefined
-> => {
+export const getRemoteMigrations = async (): Promise<ContentItem[]> => {
   const { items } = await deliveryClient
     .items()
     .type("migration")
-    .limitParameter(1)
     .orderByDescending("elements.name")
     .toObservable()
     .toPromise();
 
-  return items[0];
+  return items;
 };
 
 export const sanatiseCodename = (codename: string): string => {
