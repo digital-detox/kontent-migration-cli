@@ -4,7 +4,7 @@ import path from "path";
 import fs, { Dirent } from "fs";
 import { promisify } from "util";
 import ora from "ora";
-import { getLatestMigration, sanatiseCodename } from "./util";
+import { getRemoteMigrations, sanatiseCodename } from "./util";
 
 require("dotenv").config({
   path: path.resolve(process.cwd(), "./.env")
@@ -30,17 +30,17 @@ const getProjectMigrations = async () => {
 
 const getTodoMigrations = (
   projectMigrations: Dirent[],
-  latestMigration?: ContentItem
+  remoteMigrations: ContentItem[]
 ): Dirent[] => {
-  if (!latestMigration) {
+  if (remoteMigrations.length === 0) {
     return projectMigrations;
   }
-
-  const latestMigrationPosition = projectMigrations.findIndex(
-    (file) => file.name === latestMigration["name"].value
+  const migrationNames = remoteMigrations.map(
+    (migration) => migration.name.value
   );
-
-  return projectMigrations.slice(latestMigrationPosition + 1);
+  return projectMigrations.filter(
+    (file) => !migrationNames.includes(file.name)
+  );
 };
 
 const saveMigrationEntry = async (
@@ -94,9 +94,9 @@ const saveMigrationEntry = async (
 
 export default async () => {
   const run = ora("Calculating migrations to run").start();
-  const latestMigration = await getLatestMigration();
+  const remoteMigrations = await getRemoteMigrations();
   const projectMigrations = await getProjectMigrations();
-  const todoMigrations = getTodoMigrations(projectMigrations, latestMigration);
+  const todoMigrations = getTodoMigrations(projectMigrations, remoteMigrations);
   const client = new ManagementClient({
     projectId: process.env.PROJECT_ID,
     apiKey: process.env.API_KEY
@@ -125,15 +125,15 @@ export default async () => {
       await saveMigrationEntry(client, {
         name: todoMigration.name,
         description,
-        batch: latestMigration
-          ? parseFloat(latestMigration["batch_number"].value) + 1
+        batch: remoteMigrations.length
+          ? parseFloat([...remoteMigrations].pop()["batch_number"].value) + 1
           : 1
       });
 
       migrationTask.succeed();
     } catch (error) {
       migrationTask.fail(
-        `The migration ${description} failed because ... ${error.message}`
+        `The migration ${description} failed because ... ${error.message}\n${error.validationErrors}`
       );
       process.exit(0);
     }
