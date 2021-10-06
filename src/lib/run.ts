@@ -133,7 +133,7 @@ export default async () => {
       migrationTask.succeed();
     } catch (error) {
       migrationTask.fail(
-        `The migration ${description} failed because ... ${error.message}`
+        `The migration ${description} failed because ... ${error.message}\n${error.validationErrors}`
       );
       process.exit(0);
     }
