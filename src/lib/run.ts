@@ -132,14 +132,14 @@ export default async () => {
 
       migrationTask.succeed();
     } catch (error) {
-      const validationErrorsStr = error.validationErrors.reduce(
-        (prevErr, err) => {
+      const validationErrorsStr = (error.validationErrors || []).reduce(
+        (prevErr: string, err: Error) => {
           return `${prevErr}${err.message}\n`;
         },
         "\nValidation Errors:\n"
       );
       migrationTask.fail(
-        `The migration ${description} failed because ... ${error.message}${validationErrorsStr}`
+        `The migration ${description} failed for the following reason:\n${error.message}${validationErrorsStr}`
       );
       process.exit(0);
     }
