@@ -28,43 +28,30 @@ export const sanatiseCodename = (codename: string): string => {
   return path.basename(codename, ".js").replace(/\d*-/g, "").replace(/-/g, "_");
 };
 
-export const getLatestBatchMigrations = async (): Promise<string[]> => {
-  let items;
+export const getLastBatchNumber = (migrations: ContentItem[]): number => {
+  return parseFloat(
+    migrations
+      .map(({ batch_number: { value } }) => value)
+      .sort()
+      .pop() || "0"
+  );
+};
 
+export const getLatestBatchMigrations = async (): Promise<string[]> => {
   try {
-    const { items: responseItems } = await deliveryClient
+    const { items } = await deliveryClient
       .items()
       .type("migration")
       .toObservable()
       .toPromise();
+    const latestBatchNumber = getLastBatchNumber(items);
 
-    // @note: In theory this shouldn't be necessary, as the latest migration
-    // should have the latest batch.
-    items = [...responseItems].sort((a, b) => {
-      return (
-        parseFloat(b["batch_number"].value) -
-        parseFloat(a["batch_number"].value)
-      );
-    });
+    return items
+      .filter(
+        ({ batch_number: { value } }) => parseFloat(value) === latestBatchNumber
+      )
+      .map(({ name: { value } }) => value);
   } catch {
     throw new Error("Something went wrong fetching the items.");
   }
-
-  const latestMigrations = [];
-
-  if (!items.length) {
-    return latestMigrations;
-  }
-
-  const batchNumber = items[0]["batch_number"].value;
-
-  for (const migration of [...items].sort()) {
-    if (migration["batch_number"].value !== batchNumber) {
-      return latestMigrations;
-    }
-
-    latestMigrations.push(migration["name"].value);
-  }
-
-  return latestMigrations;
 };
