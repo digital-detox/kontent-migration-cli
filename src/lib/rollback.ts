@@ -1,7 +1,7 @@
 import { ManagementClient, ElementModels } from "@kentico/kontent-management";
 import path from "path";
 import ora from "ora";
-import { getLatestBatchMigrations, sanatiseCodename } from "./util";
+import { getLatestBatchMigrations, sanitiseCodename } from "./util";
 
 require("dotenv").config({
   path: path.resolve(process.cwd(), "./.env")
@@ -13,7 +13,7 @@ const deleteMigrationEntry = (
 ) => {
   return client
     .deleteContentItem()
-    .byItemCodename(sanatiseCodename(name))
+    .byItemCodename(sanitiseCodename(name))
     .toObservable()
     .toPromise();
 };

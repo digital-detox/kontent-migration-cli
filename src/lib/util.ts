@@ -24,7 +24,7 @@ export const getRemoteMigrations = async (): Promise<ContentItem[]> => {
   return items;
 };
 
-export const sanatiseCodename = (codename: string): string => {
+export const sanitiseCodename = (codename: string): string => {
   return path.basename(codename, ".js").replace(/\d*-/g, "").replace(/-/g, "_");
 };
 

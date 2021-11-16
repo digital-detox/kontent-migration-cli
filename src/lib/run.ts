@@ -6,7 +6,7 @@ import { promisify } from "util";
 import ora from "ora";
 import {
   getRemoteMigrations,
-  sanatiseCodename,
+  sanitiseCodename,
   getLastBatchNumber
 } from "./util";
 
@@ -59,7 +59,7 @@ const saveMigrationEntry = async (
     .addContentItem()
     .withData({
       name: description,
-      codename: sanatiseCodename(name),
+      codename: sanitiseCodename(name),
       type: {
         codename: "migration"
       }
