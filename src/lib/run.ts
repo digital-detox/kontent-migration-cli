@@ -4,7 +4,11 @@ import path from "path";
 import fs, { Dirent } from "fs";
 import { promisify } from "util";
 import ora from "ora";
-import { getRemoteMigrations, sanatiseCodename } from "./util";
+import {
+  getRemoteMigrations,
+  sanitiseCodename,
+  getLastBatchNumber
+} from "./util";
 
 require("dotenv").config({
   path: path.resolve(process.cwd(), "./.env")
@@ -55,7 +59,7 @@ const saveMigrationEntry = async (
     .addContentItem()
     .withData({
       name: description,
-      codename: sanatiseCodename(name),
+      codename: sanitiseCodename(name),
       type: {
         codename: "migration"
       }
@@ -97,6 +101,11 @@ export default async () => {
   const remoteMigrations = await getRemoteMigrations();
   const projectMigrations = await getProjectMigrations();
   const todoMigrations = getTodoMigrations(projectMigrations, remoteMigrations);
+
+  if (!process.env.PROJECT_ID || !process.env.API_KEY) {
+    run.fail("You need to set PROJECT_ID and API_KEY in your .env file.");
+  }
+
   const client = new ManagementClient({
     projectId: process.env.PROJECT_ID,
     apiKey: process.env.API_KEY
@@ -108,6 +117,8 @@ export default async () => {
   }
 
   run.succeed();
+
+  const nextBatchNumber = getLastBatchNumber(remoteMigrations) + 1;
 
   for (const todoMigration of todoMigrations) {
     const { up, description } = await require(path.resolve(
@@ -125,21 +136,19 @@ export default async () => {
       await saveMigrationEntry(client, {
         name: todoMigration.name,
         description,
-        batch: remoteMigrations.length
-          ? parseFloat([...remoteMigrations].pop()["batch_number"].value) + 1
-          : 1
+        batch: nextBatchNumber
       });
 
       migrationTask.succeed();
     } catch (error) {
-      const validationErrorsStr = error.validationErrors.reduce(
-        (prevErr, err) => {
+      const validationErrorsStr = (error.validationErrors || []).reduce(
+        (prevErr: string, err: Error) => {
           return `${prevErr}${err.message}\n`;
         },
         "\nValidation Errors:\n"
       );
       migrationTask.fail(
-        `The migration ${description} failed because ... ${error.message}${validationErrorsStr}`
+        `The migration ${description} failed for the following reason:\n${error.message}${validationErrorsStr}`
       );
       process.exit(0);
     }
