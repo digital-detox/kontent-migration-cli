@@ -1,12 +1,12 @@
 {
   "name": "kontent-migration-cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Kentico Kontent migration tool",
   "bin": {
     "kontent-migrate": "dist/bin/migrate.js"
   },
   "main": "dist/bin/migrate.js",
-  "repository": "git@github.com:alexcanessa/global-config-file.git",
+  "repository": "git@github.com:digital-detox/kontent-migration-cli.git",
   "author": "Alex Canessa <canessa.alex@gmail.com>",
   "license": "MIT",
   "scripts": {
