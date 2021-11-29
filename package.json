@@ -1,5 +1,5 @@
 {
-  "name": "@digital-detox/kontent-migration-cli",
+  "name": "kontent-migration-cli",
   "version": "0.1.0",
   "description": "Kentico Kontent migration tool",
   "bin": {
