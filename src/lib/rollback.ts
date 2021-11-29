@@ -20,6 +20,13 @@ const deleteMigrationEntry = (
 
 export default async () => {
   const run = ora("Calculating migrations to rollback").start();
+
+  if (!process.env.PROJECT_ID || !process.env.API_KEY) {
+    run.fail("You need to set PROJECT_ID and API_KEY in your .env file.");
+
+    process.exit(0);
+  }
+
   let latestMigrations: string[];
 
   try {

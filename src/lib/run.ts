@@ -98,13 +98,16 @@ const saveMigrationEntry = async (
 
 export default async () => {
   const run = ora("Calculating migrations to run").start();
-  const remoteMigrations = await getRemoteMigrations();
-  const projectMigrations = await getProjectMigrations();
-  const todoMigrations = getTodoMigrations(projectMigrations, remoteMigrations);
 
   if (!process.env.PROJECT_ID || !process.env.API_KEY) {
     run.fail("You need to set PROJECT_ID and API_KEY in your .env file.");
+
+    process.exit(0);
   }
+
+  const remoteMigrations = await getRemoteMigrations();
+  const projectMigrations = await getProjectMigrations();
+  const todoMigrations = getTodoMigrations(projectMigrations, remoteMigrations);
 
   const client = new ManagementClient({
     projectId: process.env.PROJECT_ID,

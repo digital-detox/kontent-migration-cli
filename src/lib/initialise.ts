@@ -38,11 +38,20 @@ const createMigrationContentType = async (client: ManagementClient) => {
 };
 
 export default async () => {
+  const initialise = ora("Initialise the Kontent project").start();
+
+  if (!process.env.PROJECT_ID || !process.env.API_KEY) {
+    initialise.fail(
+      "You need to set PROJECT_ID and API_KEY in your .env file."
+    );
+
+    process.exit(0);
+  }
+
   const client = new ManagementClient({
     projectId: process.env.PROJECT_ID, // id of your Kentico Kontent project
     apiKey: process.env.API_KEY // Content management API token
   });
-  const initialise = ora("Initialise the Kontent project").start();
 
   client
     .viewContentType()
