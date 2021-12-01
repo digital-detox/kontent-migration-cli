@@ -32,7 +32,7 @@ export const getLastBatchNumber = (migrations: ContentItem[]): number => {
   return parseFloat(
     migrations
       .map(({ batch_number: { value } }) => value)
-      .sort()
+      .sort((a, b) => parseFloat(a) - parseFloat(b))
       .pop() || "0"
   );
 };
