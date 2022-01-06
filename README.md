@@ -1,6 +1,6 @@
 # Kontent Migration CLI
 
-This package is a migration runner for [Kentico Kontent](https://kontent.ai/) CMS. It allows the following instructions:
+This package is a migration runner for [Kontent by Kentico](https://kontent.ai/) CMS. It allows the following instructions:
 
 - Tracking migrations in the project
 - Creating new content types
@@ -13,7 +13,7 @@ This package is a migration runner for [Kentico Kontent](https://kontent.ai/) CM
 
 ### Migration spaces
 
-For each Kentico space you should create a different migrations folder. You can set which migrations folder you will be using with the `MIGRATION_FOLDER` environment variable.
+For each Kontent space you should create a different migrations folder. You can set which migrations folder you will be using with the `MIGRATION_FOLDER` environment variable.
 
 ### Commands
 
